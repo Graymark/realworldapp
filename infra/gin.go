@@ -1,0 +1,59 @@
+package infra
+
+import (
+	"strconv"
+	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/itsjamie/gin-cors"
+)
+
+type GinServerMode int
+
+const (
+	DebugMode GinServerMode = iota
+	ReleaseMode
+	TestMode
+)
+
+// GinServer : the struct gathering all the server details
+type GinServer struct {
+	port   int
+	Router *gin.Engine
+}
+
+// New
+func NewServer(port int, mode GinServerMode) GinServer {
+	s := GinServer{}
+	s.port = port
+
+	s.Router = gin.New()
+
+	switch mode {
+	case DebugMode:
+		gin.SetMode(gin.DebugMode)
+	case TestMode:
+		gin.SetMode(gin.TestMode)
+	default:
+		gin.SetMode(gin.ReleaseMode)
+	}
+
+	s.Router.Use(gin.Recovery())
+
+	s.Router.Use(cors.Middleware(cors.Config{
+		Origins:         "*",
+		Methods:         "GET, PUT, POST, DELETE, OPTION, PATCH",
+		RequestHeaders:  "Origin, Authorization, Content-Type",
+		ExposedHeaders:  "",
+		MaxAge:          50 * time.Second,
+		Credentials:     true,
+		ValidateHeaders: false,
+	}))
+
+	return s
+}
+
+// Start the server
+func (s GinServer) Start() {
+	s.Router.Run(":" + strconv.Itoa(int(s.port)))
+}
